@@ -1,6 +1,6 @@
 # gorrs
 
-Pronounced like "gore's", abbreviation for "GO Robot Remote Server", a generic Robot Framework remote library server implementation in go.
+Pronounced like "gore's", abbreviation for "GO Robot Remote Server", a generic [Robot Framework](http://robotframework.org) [remote library server implementation](https://github.com/robotframework/RemoteInterface) in go.
 
 This is a proof of concept prototype. Not fully working at the moment. See the source code for insight/details. Others are welcome to pick up where I left off.
 
