@@ -79,8 +79,8 @@ func _stopRemoteServer() {
 type RunKeywordReturnValue struct {
 	Return    interface{} `xml:"return"`
 	Status    string      `xml:"status"`
-	Output    string      `xml:"output"`
-	Error     string      `xml:"error"`
+	Stdout    string      `xml:"output"`
+	Stderr    string      `xml:"error"`
 	Traceback string      `xml:"traceback"`
 }
 
@@ -158,9 +158,9 @@ func (h *RobotRemoteService) RunKeyword(r *http.Request, args *KeywordAndArgsInp
 	retval = 42 //truth of life
 	reply.Return = retval
 	reply.Status = "FAIL"
-	reply.Output = "stdout from keyword execution gets piped into this"
-	reply.Error = "gorrs not fully implemented yet, just a proof of concept design at the moment. stderr from keyword execution gets piped into this, by the way."
-	reply.Traceback = "stack trace info goes here, if any..."
+	reply.Stdout = "TODO: stdout from keyword execution gets piped into this"
+	reply.Stderr = "TODO: stderr from keyword execution gets piped into this"
+	reply.Traceback = "TODO: stack trace info goes here, if any..."
 	return nil
 }
 

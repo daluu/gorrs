@@ -28,11 +28,22 @@ import (
 func main() {
 	RPC := rpc.NewServer()
 	xmlrpcCodec := xml.NewCodec()
+	//map XML-RPC methods to the go implemented functions
+	//CamelCase mapping
+	xmlrpcCodec.RegisterAlias("GetKeywordNames", "RobotRemoteService.GetKeywordNames")
+	xmlrpcCodec.RegisterAlias("GetKeywordArguments", "RobotRemoteService.GetKeywordArguments")
+	xmlrpcCodec.RegisterAlias("GetKeywordDocumentation", "RobotRemoteService.GetKeywordDocumentation")
+	xmlrpcCodec.RegisterAlias("RunKeyword", "RobotRemoteService.RunKeyword")
+	//pythonic mapping
+	xmlrpcCodec.RegisterAlias("get_keyword_names", "RobotRemoteService.GetKeywordNames")
+	xmlrpcCodec.RegisterAlias("get_keyword_arguments", "RobotRemoteService.GetKeywordArguments")
+	xmlrpcCodec.RegisterAlias("get_keyword_documentation", "RobotRemoteService.GetKeywordDocumentation")
+	xmlrpcCodec.RegisterAlias("run_keyword", "RobotRemoteService.RunKeyword")
+
+	//set server to handle both XML MIME types
+	RPC.RegisterCodec(xmlrpcCodec, "application/xml")
 	RPC.RegisterCodec(xmlrpcCodec, "text/xml")
-	// is there a way to register XML-RPC service such that when XML-RPC client calls the service
-	// they refer to service w/o a namespace? e.g. "RunKeyword" instead of "RobotRemoteService.RunKeyword"?
-	// see https://github.com/divan/gorilla-xmlrpc/issues/14
-	// and https://github.com/gorilla/rpc/issues/48
+
 	RPC.RegisterService(new(protocol.RobotRemoteService), "")
 	http.Handle("/RPC2", RPC) //preserve option to use RPC2 endpoint
 	http.Handle("/", RPC)     //but not make it required when using with Robot Framework
