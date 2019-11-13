@@ -6,9 +6,10 @@ This is a proof of concept prototype. Not fully working at the moment. See the s
 
 ## Setup
 
-1. Have a version of [go](https://golang.org/dl/) installed. Recommend go 1.5+. And set up your $GOPATH and $GOBIN environment variables.
-2. Get a copy of gorrs for go: ```go get github.com/daluu/gorrs```
-3. Get gorrs external dependencies: ```go get github.com/gorilla/rpc``` and ```go get github.com/divan/gorilla-xmlrpc/xml```. Sorry there are several go package managers, and not a true single standard yet. So I don't want to stick with any at the moment.
+1. Have a version of [go](https://golang.org/dl/) installed. Recommend go 1.13+. And set up your $GOPATH and $GOBIN environment variables.
+2. Get a copy of gorrs: ```go get -u github.com/daluu/gorrs```
+
+The combination of go modules (`go.mod` + `go.sum`) & `go get -u` should pick up all the (versioned) dependencies to build gorrs. If you prefer using a different method of go dependency management, feel free to do so yourself.
 
 ## Intended usage (when gorrs is fully working):
 
