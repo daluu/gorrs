@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -45,6 +46,12 @@ type KeywordNamesReturnValue struct {
 	Keywords []interface{}
 }
 
+var offeredLibrary interface{}
+
+func (h *RobotRemoteService) InitilizeRemoteLibrary(library interface{}) {
+	offeredLibrary = library
+}
+
 //sample XML-RPC input: <methodCall><methodName>GetKeywordNames</methodName><params></params></methodCall>
 /* sample XML-RPC output:
  * <methodResponse><params><param><value><array><data>
@@ -56,6 +63,13 @@ type KeywordNamesReturnValue struct {
 func (h *RobotRemoteService) GetKeywordNames(r *http.Request, args *struct{}, reply *KeywordNamesReturnValue) error {
 	//TODO: use reflection to generate array of keywords (found in the imported namespace) to return in reply
 	//maybe rather than all imported packages, restrict to a specific one, etc. as specified at server startup?
+	//keywordLibrary := new(offeredLibrary)
+	libraryKeywords := reflect.TypeOf(offeredLibrary)
+	//libraryKeywords := reflect.PtrTo(reflect.TypeOf(offeredLibrary{}))
+	log.Printf("Found %d keywords", libraryKeywords.NumMethod())
+	for i := 0; i < libraryKeywords.NumMethod(); i++ {
+		reply.Keywords = append(reply.Keywords, libraryKeywords.Method(i).Name)
+	}
 
 	//add special keyword built-in to the server:
 	reply.Keywords = append(reply.Keywords, "StopRemoteServer")
@@ -74,6 +88,10 @@ func (h *RobotRemoteService) StopRemoteServer() {
 
 func _stopRemoteServer() {
 	os.Exit(1)
+}
+
+type Response struct {
+	Content RunKeywordReturnValue
 }
 
 type RunKeywordReturnValue struct {
@@ -131,36 +149,45 @@ type KeywordAndArgsInput struct {
  */
 //this function doesn't fully work yet, see
 //https://github.com/divan/gorilla-xmlrpc/issues/ #16 and 18
-func (h *RobotRemoteService) RunKeyword(r *http.Request, args *KeywordAndArgsInput, reply *RunKeywordReturnValue) error {
+func (h *RobotRemoteService) RunKeyword(r *http.Request, args *KeywordAndArgsInput, reply *Response) error {
 	//use reflection to run function "keyword name" out of 1st arg
 	//with 2nd arg (array) containing the args for the keyword function
 	//sample debug/test code for now...
 	log.Printf("keyword: %+v\n", args.KeywordName)
+	log.Printf("args: %+v\n", args.KeywordAguments)
+
+	reply.Content.Status = "PASS"
+
 	if args.KeywordName == "StopRemoteServer" {
 		go h.StopRemoteServer()
-	}
-	log.Printf("args: %+v\n", args.KeywordAguments)
-	for _, a := range args.KeywordAguments {
-		log.Printf("arg: %+v\n", a)
-		switch reflect.TypeOf(a).Kind() {
-		case reflect.Slice:
-			log.Printf("args:\n")
-			s := reflect.ValueOf(a)
-			for i := 0; i < s.Len(); i++ {
-				log.Printf("%v: %+v\n", i, s.Index(i))
+	} else {
+		method := reflect.ValueOf(offeredLibrary).MethodByName(args.KeywordName)
+		if method.Type().NumIn() == len(args.KeywordAguments) {
+			in := make([]reflect.Value, method.Type().NumIn())
+			for i := 0; i < method.Type().NumIn(); i++ {
+				var object interface{}
+				if method.Type().In(i).Kind() == reflect.Ptr {
+					object = offeredLibrary
+				} else {
+					object = args.KeywordAguments[i]
+				}
+				fmt.Println(i, "->", object)
+				in[i] = reflect.ValueOf(object)
 			}
-		default:
-			log.Println("Somehow didn't get an array of arguments for keyword.")
+			returnValue := method.Call(in)
+			if method.Type().NumOut() == 1 {
+				reply.Content.Return = returnValue[0].Interface()
+			} else if method.Type().NumOut() > 1 {
+				reply.Content.Stderr = "supporting only 0 or 1 return values"
+			}
+		} else {
+			reply.Content.Stderr = fmt.Sprintf("incorrect amount of input variables; expected %d and got %d", method.Type().NumIn()-1, len(args.KeywordAguments))
+			reply.Content.Status = "FAIL"
 		}
 	}
-	//and return the results in struct below (sample static output for now):
-	var retval interface{}
-	retval = 42 //truth of life
-	reply.Return = retval
-	reply.Status = "FAIL"
-	reply.Stdout = "TODO: stdout from keyword execution gets piped into this"
-	reply.Stderr = "TODO: stderr from keyword execution gets piped into this"
-	reply.Traceback = "TODO: stack trace info goes here, if any..."
+	reply.Content.Stdout = "TODO: stdout from keyword execution gets piped into this"
+	//reply.Content.Stderr = "TODO: stderr from keyword execution gets piped into this"
+	reply.Content.Traceback = "TODO: stack trace info goes here, if any..."
 	return nil
 }
 
@@ -179,9 +206,21 @@ type KeywordArgumentsReturnValue struct {
 //sample XML-RPC output: <methodResponse><params><param><value><array><data><value><string>arg1</string></value>...</data></array></value></param></params></methodResponse>
 func (h *RobotRemoteService) GetKeywordArguments(r *http.Request, args *KeywordInput, reply *KeywordArgumentsReturnValue) error {
 	//use reflection to get the arguments to keyword function and pass back to reply
-	reply.KeywordAguments = make([]interface{}, 0) //if to pass back no arguments
-	//http://stackoverflow.com/questions/12990338/cannot-convert-string-to-interface
-	//else something like reply.KeywordAguments = append(reply.KeywordAguments,"two","arguments")
+	log.Printf("Getting arguments for %s", args.KeywordName)
+	method := reflect.ValueOf(offeredLibrary).MethodByName(args.KeywordName)
+	j := 0
+	if args.KeywordName != "StopRemoteServer" {
+		for i := 0; i < method.Type().NumIn(); i++ {
+			if method.Type().In(i).Kind() != reflect.Ptr {
+				methodName := method.Type().In(i).Name()
+				if len(methodName) == 0 || methodName == method.Type().In(i).Kind().String() {
+					methodName = fmt.Sprintf("arg%d", j)
+				}
+				reply.KeywordAguments = append(reply.KeywordAguments, methodName)
+				j++
+			}
+		}
+	}
 	return nil
 }
 
