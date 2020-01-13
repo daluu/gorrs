@@ -3,6 +3,7 @@ package runner
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/daluu/gorrs/protocol"
 	"github.com/divan/gorilla-xmlrpc/xml"
@@ -45,11 +46,19 @@ func RunRemoteServer(library interface{}) {
 	RPC.RegisterCodec(xmlrpcCodec, "text/xml")
 	protocolType := new(protocol.RobotRemoteService)
 	protocolType.InitilizeRemoteLibrary(library)
-	RPC.RegisterService(protocolType, "")
+	err := RPC.RegisterService(protocolType, "")
+	if err != nil {
+		log.Fatal(err)
+	}
 	http.Handle("/RPC2", RPC) //preserve option to use RPC2 endpoint
 	http.Handle("/", RPC)     //but not make it required when using with Robot Framework
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8270"
+	}
+
 	//TODO: make port and host/IP address binding be configurable via CLI flags and not fixed to localhost:8270 (the default)
-	log.Println("Robot remote server started on localhost:8270 under / and /RPC2 endpoints. Stop server with Ctrl+C, kill, etc. or XML-RPC method 'run_keyword' with parameter 'stop_remote_server'")
-	log.Fatal(http.ListenAndServe(":8270", nil))
+	log.Printf("Robot remote server started on localhost:%s under / and /RPC2 endpoints. Stop server with Ctrl+C, kill, etc. or XML-RPC method 'run_keyword' with parameter 'stop_remote_server'\n", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
